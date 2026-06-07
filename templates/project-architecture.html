@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>项目 — 架构图</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', ui-monospace, monospace;
+  --bg: oklch(96.7% 0.001 286.4);
+  --surface: oklch(99% 0.002 286.4);
+  --surface-muted: oklch(91.9% 0.004 286.3);
+  --text: oklch(27.4% 0.006 286.0);
+  --text-secondary: oklch(44.2% 0.017 285.8);
+  --text-muted: #a1a1aa;
+  --accent: #facc15;
+  --accent-dim: rgba(253, 203, 40, 0.15);
+  --success: #22c55e;
+  --error: #ef4444;
+  --info: #3b82f6;
+  --border: oklch(91.9% 0.004 286.3);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0px 1px 2px rgba(0,0,0,0.1), 0px 10px 20px rgba(0,0,0,0.05);
+  --radius: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: oklch(27.4% 0.006 286.0);
+    --surface: oklch(37% 0.013 285.8);
+    --surface-muted: oklch(44.2% 0.017 285.8);
+    --text: oklch(96.7% 0.001 286.4);
+    --text-secondary: #a1a1aa;
+    --text-muted: oklch(55.2% 0.016 285.9);
+    --accent-dim: rgba(253,203,40,0.2);
+    --border: oklch(44.2% 0.017 285.8);
+  }
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:var(--font-body);font-size:15px;line-height:1.6;
+  color:var(--text);background:var(--bg);
+  background-image:radial-gradient(circle,var(--border)1px,transparent 1px);
+  background-size:24px 24px;
+  padding:40px 20px;-webkit-font-smoothing:antialiased;
+}
+.container{max-width:1100px;margin:0 auto}
+h1{font-size:36px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px}
+h2{font-size:20px;font-weight:600;margin:48px 0 12px;color:var(--text)}
+.subtitle{color:var(--text-muted);font-family:var(--font-mono);font-size:12px;margin-bottom:32px}
+.desc{font-size:14px;color:var(--text-secondary);margin-bottom:20px;max-width:700px}
+.mermaid-wrap{
+  position:relative;background:var(--surface);
+  border:1px solid var(--border);border-radius:12px;
+  padding:28px 20px;overflow:auto;margin-bottom:16px;
+  box-shadow:var(--shadow-sm);
+}
+.mermaid-wrap .mermaid{display:flex;justify-content:center;
+  transition:transform 0.2s ease;transform-origin:top center}
+.zoom-controls{
+  position:absolute;top:8px;right:8px;display:flex;gap:2px;z-index:10;
+  background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:2px;
+}
+.zoom-controls button{
+  width:28px;height:28px;border:none;background:transparent;
+  color:var(--text-muted);font-family:var(--font-mono);font-size:14px;
+  cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;
+}
+.zoom-controls button:hover{background:var(--surface-muted);color:var(--text)}
+.mermaid .nodeLabel{font-family:var(--font-body)!important;font-size:15px!important}
+.mermaid .edgeLabel{font-family:var(--font-mono)!important;font-size:12px!important}
+.legend{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:8px}
+.legend-item{display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;color:var(--text-muted)}
+.legend-swatch{width:12px;height:12px;border-radius:3px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.animate{animation:fadeUp 0.4s ease-out both;animation-delay:calc(var(--i,0)*0.06s)}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0.01ms!important;animation-delay:0ms!important}}
+.lerian-footer{margin-top:64px;padding:24px 0;border-top:1px solid var(--border);position:relative}
+.lerian-footer::before{
+  content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:100vw;height:100%;background:var(--surface);border-top:1px solid var(--border);z-index:-1;
+}
+.footer-inner{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.footer-brand{display:flex;align-items:center;gap:12px}
+.footer-brand-text{display:flex;flex-direction:column;gap:1px}
+.footer-company{font-weight:600;font-size:14px;color:var(--text)}
+.footer-meta{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.footer-generated{font-size:13px;color:var(--text-secondary)}
+.footer-date{font-size:13px;color:var(--text-muted)}
+@media(max-width:768px){body{padding:16px}h1{font-size:26px}.footer-inner{flex-direction:column;align-items:flex-start}.footer-meta{align-items:flex-start}}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1 class="animate" style="--i:0">项目架构全景</h1>
+<p class="subtitle animate" style="--i:1"></p>
+<p class="desc animate" style="--i:2"></p>
+
+<!-- ========== DIAGRAM TEMPLATE ========== -->
+<!-- 把各图按以下结构插入：
+<h2 class="animate" style="--i:3">图 N: 标题</h2>
+<div class="mermaid-wrap animate" style="--i:4">
+  <div class="zoom-controls">
+    <button onclick="zoomDiagram(this,1.2)">+</button>
+    <button onclick="zoomDiagram(this,0.8)">&minus;</button>
+    <button onclick="resetZoom(this)">&#8634;</button>
+  </div>
+  <div class="mermaid">
+    ... Mermaid DSL ...
+  </div>
+</div>
+<div class="legend animate" style="--i:5">...图例...</div>
+-->
+
+<footer class="lerian-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <div class="footer-brand-text">
+        <span class="footer-company">Architecture Diagrams</span>
+      </div>
+    </div>
+    <div class="footer-meta">
+      <span class="footer-generated"><strong>Generated with Mermaid</strong></span>
+      <span class="footer-date"></span>
+    </div>
+  </div>
+</footer>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+var isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'base',
+  themeVariables: {
+    primaryColor: isDark ? '#334155' : '#fef9c3',
+    primaryBorderColor: isDark ? '#facc15' : '#ca8a04',
+    primaryTextColor: isDark ? '#f8fafc' : '#1e293b',
+    lineColor: isDark ? '#94a3b8' : '#475569',
+    fontSize: '16px',
+    fontFamily: "'Inter',ui-sans-serif,system-ui,sans-serif"
+  }
+});
+</script>
+<script>
+function zoomDiagram(btn,f){var w=btn.closest('.mermaid-wrap'),t=w.querySelector('.mermaid');if(!t)return;var c=parseFloat(t.dataset.zoom||'1'),n=Math.min(Math.max(c*f,0.3),5);t.dataset.zoom=n;t.style.transform='scale('+n+')'}
+function resetZoom(btn){var w=btn.closest('.mermaid-wrap'),t=w.querySelector('.mermaid');if(!t)return;t.dataset.zoom='1';t.style.transform='scale(1)'}
+document.querySelectorAll('.mermaid-wrap').forEach(function(w){
+  w.addEventListener('wheel',function(e){if(!e.ctrlKey&&!e.metaKey)return;e.preventDefault();var t=w.querySelector('.mermaid');if(!t)return;var c=parseFloat(t.dataset.zoom||'1'),n=Math.min(Math.max(c*(e.deltaY<0?1.1:0.9),0.3),5);t.dataset.zoom=n;t.style.transform='scale('+n+')'},{passive:false});
+});
+document.querySelector('.footer-date').textContent=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+</script>
+
+</body>
+</html>

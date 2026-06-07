@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eino-data-agent — 架构图</title>
+<!--
+  Artifact brief: 为 eino-data-agent 项目生成两张技术图，供开发者理解系统全貌。
+  Audience: Go 开发者、AI 工程评审者。
+  Physical scene: 架构评审桌面 — 干净的工程图表面。
+  Source facts: graph.go pipeline节点、分层架构 cmd→service→agent→repository→entities、CLAUDE.md architecture overview。
+  Entities: 9个pipeline节点、7个repository接口、3种存储后端、5层架构。
+  Relationships: 串行依赖（边）、条件分支（validate→correct→execute）、接口→实现。
+  Hierarchy: Pipeline主路径优先、分支和错误路径次要。
+  Message: 10秒理解：用户输入→分词→向量/全文召回→LLM筛选→SQL生成→验证→执行→结果。
+  Non-invention boundary: 不发明不存在的节点、不虚构存储后端。
+  Visual thesis: 双面板工程图 — pipeline 用垂直流程图展示数据流，架构用分层图展示依赖方向。
+  Design choices:
+    1. Pipeline 用 Mermaid graph TD 垂直布局，条件分支用菱形节点
+    2. 架构用 Mermaid graph LR 水平分层，每层一种颜色
+    3. 双主题（light+dark），dot-grid 背景，Lerian 品牌框架
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', ui-monospace, monospace;
+  --bg: oklch(96.7% 0.001 286.4);
+  --surface: oklch(99% 0.002 286.4);
+  --surface-muted: oklch(91.9% 0.004 286.3);
+  --text: oklch(27.4% 0.006 286.0);
+  --text-secondary: oklch(44.2% 0.017 285.8);
+  --text-muted: #a1a1aa;
+  --accent: #facc15;
+  --accent-dim: rgba(253, 203, 40, 0.15);
+  --success: #22c55e;
+  --error: #ef4444;
+  --info: #3b82f6;
+  --border: oklch(91.9% 0.004 286.3);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0px 1px 2px rgba(0,0,0,0.1), 0px 10px 20px rgba(0,0,0,0.05);
+  --radius: 8px;
+  --node-extract: #facc15;
+  --node-recall: #4ade80;
+  --node-merge: #fb923c;
+  --node-filter: #3b82f6;
+  --node-sql: #ea580c;
+  --node-exec: #22c55e;
+  --node-error: #ef4444;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: oklch(27.4% 0.006 286.0);
+    --surface: oklch(37% 0.013 285.8);
+    --surface-muted: oklch(44.2% 0.017 285.8);
+    --text: oklch(96.7% 0.001 286.4);
+    --text-secondary: #a1a1aa;
+    --text-muted: oklch(55.2% 0.016 285.9);
+    --accent-dim: rgba(253,203,40,0.2);
+    --border: oklch(44.2% 0.017 285.8);
+  }
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:var(--font-body);font-size:15px;line-height:1.6;
+  color:var(--text);background:var(--bg);
+  background-image:radial-gradient(circle,var(--border)1px,transparent 1px);
+  background-size:24px 24px;
+  padding:40px 20px;-webkit-font-smoothing:antialiased;
+}
+.container{max-width:1100px;margin:0 auto}
+.lerian-header{margin-bottom:32px}
+.lerian-header a{display:inline-block;text-decoration:none;color:var(--text)}
+.lerian-header .logo-mark{width:100px;height:auto;display:block}
+h1{font-size:36px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px}
+h2{font-size:20px;font-weight:600;margin:48px 0 12px;color:var(--text)}
+.subtitle{color:var(--text-muted);font-family:var(--font-mono);font-size:12px;margin-bottom:32px}
+.desc{font-size:14px;color:var(--text-secondary);margin-bottom:20px;max-width:700px}
+.mermaid-wrap{
+  position:relative;background:var(--surface);
+  border:1px solid var(--border);border-radius:12px;
+  padding:28px 20px;overflow:auto;margin-bottom:16px;
+  box-shadow:var(--shadow-sm);
+}
+.mermaid-wrap .mermaid{display:flex;justify-content:center;
+  transition:transform 0.2s ease;transform-origin:top center}
+.zoom-controls{
+  position:absolute;top:8px;right:8px;display:flex;gap:2px;z-index:10;
+  background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:2px;
+}
+.zoom-controls button{
+  width:28px;height:28px;border:none;background:transparent;
+  color:var(--text-muted);font-family:var(--font-mono);font-size:14px;
+  cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;
+}
+.zoom-controls button:hover{background:var(--surface-muted);color:var(--text)}
+.mermaid .nodeLabel{font-family:var(--font-body)!important;font-size:15px!important}
+.mermaid .edgeLabel{font-family:var(--font-mono)!important;font-size:12px!important}
+.legend{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:8px}
+.legend-item{display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;color:var(--text-muted)}
+.legend-swatch{width:12px;height:12px;border-radius:3px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.animate{animation:fadeUp 0.4s ease-out both;animation-delay:calc(var(--i,0)*0.06s)}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0.01ms!important;animation-delay:0ms!important}}
+.lerian-footer{margin-top:64px;padding:24px 0;border-top:1px solid var(--border);position:relative}
+.lerian-footer::before{
+  content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:100vw;height:100%;background:var(--surface);border-top:1px solid var(--border);z-index:-1;
+}
+.footer-inner{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.footer-brand{display:flex;align-items:center;gap:12px}
+.footer-brand .logo-mark{height:20px;width:auto;color:var(--text)}
+.footer-brand-text{display:flex;flex-direction:column;gap:1px}
+.footer-company{font-weight:600;font-size:14px;color:var(--text)}
+.footer-meta{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.footer-generated{font-size:13px;color:var(--text-secondary)}
+.footer-date{font-size:13px;color:var(--text-muted)}
+@media(max-width:768px){body{padding:16px}h1{font-size:26px}.footer-inner{flex-direction:column;align-items:flex-start}.footer-meta{align-items:flex-start}}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="lerian-header">
+  <a href="https://lerian.studio" aria-label="Lerian Studio">
+    <svg class="logo-mark" viewBox="0 0 1090.88 280" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path fill-rule="evenodd" d="M619.42,29.69c0,15.43-10.87,27.93-27.93,27.93s-27.93-12.51-27.93-27.93,10.86-27.93,27.92-27.93,27.93,12.51,27.93,27.93h0ZM158.64,242.4v33.54H12.13v-33.55h48.36c3.16,0,5.73-2.57,5.73-5.73V87.77c0-3.16-2.57-5.73-5.73-5.73H7.85v-34.31h98.33v188.94c0,3.16,2.57,5.73,5.73,5.73h46.74ZM168.85,179.86c0,58.52,37.29,98.33,99.47,98.33,49.15,0,79.7-30.6,86.27-67.08h-40.69c-6.29,24.54-26.97,33.91-48.61,33.91-48.85,0-53.41-45.18-53.83-55-.04-1.02.77-1.87,1.79-1.87h143.61c.76-5.26,1.13-10.42,1.13-15.44,0-32.71-20.25-91.92-95.33-91.92-57.04,0-93.8,41.26-93.81,99.07ZM314.47,158.39l-99.49.02c-1.08,0-1.94-.96-1.78-2.02,4.49-31.28,30.98-42.82,50.98-42.82,33.88,0,48.71,21.59,52.08,42.79.17,1.08-.69,2.04-1.78,2.04h0ZM867.2,83.16h0s0,0,0,0h0ZM826.87,83.16h40.33v192.83h-40.32v-24.53c0-3.09-3.92-4.41-5.79-1.95-.18.23-.35.47-.53.71h0s0,.02,0,.02h0c-.11.16-.23.32-.35.47-7.92,10.56-20.68,27.53-56.24,27.53-60.83,0-91.19-46.33-91.19-98.7,0-61.42,40.37-98.72,91.17-98.72,36.73,0,48.44,15.73,56.64,26.75l.49.66c1.86,2.49,5.81,1.18,5.81-1.93v-23.14ZM770.75,115.48c34.78,0,56.14,27.81,56.14,64.8h0c0,42-26.32,63.68-56.14,63.68-34.83,0-56.14-27.43-56.14-64.43,0-42.07,26.11-64.05,56.14-64.05ZM1063.39,101.7c14.42,14.06,21.64,36.67,21.64,67.8v106.25h-41.06v-103.99c0-43.98-22.35-56.14-45.96-56.14-31.99,0-51.6,23.22-51.6,62.92v97.21h-40.68V83.15h39.93v25.07c0,3.11,3.95,4.4,5.82,1.92,8.55-11.4,26.72-29.52,55.98-29.52,37.55,0,55.75,20.88,55.93,21.08ZM657.42,275.94v-33.54h0s-37.37,0-37.37,0c-3.16,0-5.73-2.57-5.73-5.73V83.14h-81.34v34.31h37.54c3.16,0,5.73,2.57,5.73,5.73v113.48c0,3.16-2.57,5.73-5.73,5.73h-38.14v33.55h125.03ZM499.27,119.27c0,.13-.1.23-.23.23h0s-36.31,0-36.31,0c-28.68,0-28.65,24.99-28.64,43.62,0,.46,0,.92,0,1.37v111.24c0,.13-.1.23-.23.23h-41.01c-.13,0-.23-.1-.23-.23V83.27c0-.13.1-.23.23-.23h36.49c.13,0,.23.1.23.23v24.03c0,4.05,5.24,5.65,7.49,2.28.22-.32.43-.64.65-.97,8.18-12.25,18.71-28.02,52.51-28.02h9.05v38.68Z"/>
+    </svg>
+  </a>
+</header>
+
+<h1 class="animate" style="--i:0">eino-data-agent 架构全景</h1>
+<p class="subtitle animate" style="--i:1">Text-to-SQL Agent — Go + CloudWeGo Eino + DeepSeek + DashScope</p>
+<p class="desc animate" style="--i:2">
+  用户自然语言提问 → 中文分词抽取关键词 → 向量/全文检索召回字段和取值 → LLM 筛选表和指标
+  → 生成 SQL → MySQL EXPLAIN 验证 → 执行并返回结果。
+  全程通过 SSE 推送进度和中间数据。
+</p>
+
+<!-- ========== DIAGRAM 1: PIPELINE ========== -->
+<h2 class="animate" style="--i:3">图 1: Graph Pipeline 数据流</h2>
+
+<div class="mermaid-wrap animate" style="--i:4">
+  <div class="zoom-controls">
+    <button onclick="zoomDiagram(this,1.2)">+</button>
+    <button onclick="zoomDiagram(this,0.8)">&minus;</button>
+    <button onclick="resetZoom(this)">&#8634;</button>
+  </div>
+  <div class="mermaid">
+    graph TD
+      START((用户输入)):::start --> A
+
+      subgraph NLP["分词 & 关键词抽取"]
+        A[extract_keywords<br/>gojieba 中文分词]:::extract
+      end
+
+      A --> B
+
+      subgraph Recall["并行召回 (goroutine)"]
+        B[recall_all]:::recall
+        C1[recall_column<br/>Qdrant 向量]:::storage
+        C2[recall_value<br/>ES 全文检索]:::storage
+        C3[recall_metric<br/>Qdrant 向量]:::storage
+        B -.-> C1
+        B -.-> C2
+        B -.-> C3
+      end
+
+      C1 --> D
+      C2 --> D
+      C3 --> D
+
+      D[merge_retrieved<br/>MySQL 补全字段]:::merge --> E
+
+      subgraph Filter["LLM 筛选 (并行)"]
+        E[filter_all]:::filter
+        E1[filter_table<br/>LLM 筛表+字段]:::llm
+        E2[filter_metric<br/>LLM 筛指标]:::llm
+        E -.-> E1
+        E -.-> E2
+      end
+
+      E1 --> F
+      E2 --> F
+
+      F[add_extra_context<br/>日期+DB版本]:::context --> G
+
+      G[generate_sql<br/>LLM + Prompt]:::sql --> H
+
+      H{validate_sql<br/>MySQL EXPLAIN}:::gate
+
+      H -->|SQL 正确| I[execute_sql<br/>执行查询]:::exec
+      H -->|SQL 错误| J[correct_sql<br/>LLM 修正]:::error
+      J --> I
+
+      I --> RESULT((返回结果)):::done
+
+      classDef start fill:#fef9c3,stroke:#facc15,stroke-width:2px;
+      classDef extract fill:#fef08a,stroke:#facc15,stroke-width:2px;
+      classDef recall fill:#dcfce7,stroke:#4ade80,stroke-width:2px;
+      classDef storage fill:#f0fdf4,stroke:#16a34a,stroke-width:1px,stroke-dasharray:4 3;
+      classDef merge fill:#fff7ed,stroke:#fb923c,stroke-width:2px;
+      classDef filter fill:#eff6ff,stroke:#3b82f6,stroke-width:2px;
+      classDef llm fill:#f8fafc,stroke:#3b82f6,stroke-width:1px,stroke-dasharray:4 3;
+      classDef context fill:#f4f4f5,stroke:#71717a,stroke-width:2px;
+      classDef sql fill:#fef3c7,stroke:#ea580c,stroke-width:3px;
+      classDef gate fill:#eff6ff,stroke:#3b82f6,stroke-width:2px;
+      classDef exec fill:#d1fae5,stroke:#22c55e,stroke-width:3px;
+      classDef error fill:#fef2f2,stroke:#ef4444,stroke-width:2px,stroke-dasharray:5 3;
+      classDef done fill:#bbf7d0,stroke:#22c55e,stroke-width:3px;
+  </div>
+</div>
+
+<div class="legend animate" style="--i:5">
+  <div class="legend-item"><div class="legend-swatch" style="background:#facc15"></div> 关键词抽取</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#4ade80"></div> 召回/执行</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#3b82f6"></div> LLM 处理</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#ea580c"></div> SQL 生成</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#ef4444"></div> 错误修正</div>
+  <div class="legend-item"><div class="legend-swatch" style="border:2px dashed #16a34a;background:transparent"></div> goroutine 并行</div>
+</div>
+
+<!-- ========== DIAGRAM 2: ARCHITECTURE ========== -->
+<h2 class="animate" style="--i:3">图 2: 分层架构 &amp; 依赖关系</h2>
+
+<div class="mermaid-wrap animate" style="--i:4">
+  <div class="zoom-controls">
+    <button onclick="zoomDiagram(this,1.2)">+</button>
+    <button onclick="zoomDiagram(this,0.8)">&minus;</button>
+    <button onclick="resetZoom(this)">&#8634;</button>
+  </div>
+  <div class="mermaid">
+    graph TD
+
+      CMD["cmd/ 入口层
+─────────────
+· cmd/server (HTTP)
+· cmd/build-meta (构建)"]:::cmd
+
+      SVC["service/ 服务层
+─────────────
+· QueryService
+· BuildMetaService"]:::svc
+
+      AGENT["agent/ Agent 层
+─────────────
+· graph.go (StateGraph)
+· nodes/*.go (10 节点)
+· astate (共享状态)
+· agentctx (DI 注入)"]:::agent
+
+      REPO["repository/ 仓储层
+─────────────
+· mysql (Meta + DW)
+· qdrant (Column + Metric)
+· es (Value)"]:::repo
+
+      BASE["entities + 基础设施
+─────────────
+· entities (数据模型)
+· conf (配置加载)
+· client (LLM/连接)
+· util (工具集)"]:::base
+
+      EXT["外部服务
+─────────────
+· DeepSeek API / DashScope
+· MySQL (元数据+数据仓库)
+· Qdrant (向量库)
+· Elasticsearch (全文检索)"]:::ext
+
+      CMD -->|调用| SVC
+      SVC -->|编排| AGENT
+      AGENT -->|访问| REPO
+      REPO -->|引用| BASE
+      REPO -.->|写入/查询| EXT
+      AGENT -.->|LLM/Embedding| EXT
+
+      classDef cmd fill:#fef08a,stroke:#facc15,stroke-width:2px;
+      classDef svc fill:#dcfce7,stroke:#4ade80,stroke-width:2px;
+      classDef agent fill:#eff6ff,stroke:#3b82f6,stroke-width:2px;
+      classDef repo fill:#fef3c7,stroke:#ea580c,stroke-width:2px;
+      classDef base fill:#f4f4f5,stroke:#71717a,stroke-width:1px;
+      classDef ext fill:#fafaf9,stroke:#a1a1aa,stroke-width:1px,stroke-dasharray:4 3;
+  </div>
+</div>
+
+<div class="legend animate" style="--i:5">
+  <div class="legend-item"><div class="legend-swatch" style="background:#facc15"></div> cmd 入口</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#4ade80"></div> service 服务</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#3b82f6"></div> agent 编排</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#ea580c"></div> repository 仓储</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#71717a"></div> entities / 基础</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#a1a1aa;opacity:0.6"></div> 外部服务</div>
+  <div class="legend-item"><div class="legend-swatch" style="border:2px dashed #a1a1aa;background:transparent"></div> 虚箭头 = 网络连接</div>
+</div>
+
+<!-- ========== DIAGRAM 5: ER ========== -->
+<h2 class="animate" style="--i:3">图 5: 数据模型（ER 图）</h2>
+
+<div class="mermaid-wrap animate" style="--i:4">
+  <div class="zoom-controls">
+    <button onclick="zoomDiagram(this,1.2)">+</button>
+    <button onclick="zoomDiagram(this,0.8">&minus;</button>
+    <button onclick="resetZoom(this)">&#8634;</button>
+  </div>
+  <div class="mermaid">
+    erDiagram
+
+      TableInfo ||--o{ ColumnInfo : "1:N 包含"
+      ColumnInfo }o--|| MetricInfo : "M:N ColumnMetric"
+      TableInfo ||--o{ MetricInfo : "1:N 定义"
+      ColumnInfo ||--o{ ValueInfo : "1:N 有取值"
+
+      TableInfo {
+        string ID PK "表名"
+        string Name "显示名"
+        string Role "事实表/维度表"
+        string Description "说明"
+      }
+
+      ColumnInfo {
+        string ID PK "表名.列名"
+        string Name "列名"
+        string Type "MySQL 类型"
+        string Role "维度/度量"
+        string Description "说明"
+        string Alias "别名列表"
+        string TableID FK "所属表"
+      }
+
+      MetricInfo {
+        string ID PK "指标名"
+        string Name "显示名"
+        string Description "指标说明"
+        string RelevantColumns "关联列"
+        string Alias "别名"
+      }
+
+      ColumnMetric {
+        string ColumnID FK "所属列"
+        string MetricID FK "所属指标"
+      }
+
+      ValueInfo {
+        string ID PK "表.列.值"
+        string Value "枚举值"
+        string ColumnID FK "所属列"
+        string TableID "所属表"
+      }
+  </div>
+</div>
+
+<div class="legend animate" style="--i:5">
+  <div class="legend-item"><div class="legend-swatch" style="background:#6366f1"></div> 实体</div>
+  <div class="legend-item"><div class="legend-swatch" style="border:2px solid #6366f1;background:transparent"></div> ||=一, o{=多</div>
+</div>
+
+<!-- ========== DIAGRAM 6: SEQUENCE ========== -->
+<h2 class="animate" style="--i:3">图 6: 一次查询的完整时序</h2>
+
+<div class="mermaid-wrap animate" style="--i:4">
+  <div class="zoom-controls">
+    <button onclick="zoomDiagram(this,1.2)">+</button>
+    <button onclick="zoomDiagram(this,0.8">&minus;</button>
+    <button onclick="resetZoom(this)">&#8634;</button>
+  </div>
+  <div class="mermaid">
+    sequenceDiagram
+      participant U as 用户
+      participant H as HTTP
+      participant QS as QueryService
+      participant G as Pipeline (Eino Graph)
+      participant LLM as LLM
+      participant DB as MySQL
+      participant S as Qdrant / ES
+
+      U->>H: POST /api/query
+      H->>QS: HandleQuery
+      QS->>G: Run(ctx, state)
+
+      G->>G: extract_keywords (分词)
+
+      par 并行召回 (goroutine x3)
+        G->>S: 向量检索字段/指标
+        G->>S: 全文检索取值
+      end
+
+      G->>DB: 查询元数据补全
+
+      par LLM 筛选 (goroutine x2)
+        G->>LLM: 筛表+字段
+        G->>LLM: 筛指标
+      end
+
+      G->>LLM: 生成 SQL
+      G->>DB: EXPLAIN 验证
+
+      alt 验证通过
+        G->>DB: 执行 SQL
+      else 验证失败
+        G->>LLM: 修正 SQL
+        G->>DB: 重试 EXPLAIN + 执行
+      end
+
+      G-->>QS: 结果
+      QS-->>H: SSE 推送
+      H-->>U: 进度 + 表格
+  </div>
+</div>
+
+<div class="legend animate" style="--i:5">
+  <div class="legend-item"><div class="legend-swatch" style="background:#3b82f6"></div> 系统组件</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#22c55e"></div> par = 并行调用</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#ef4444"></div> alt = 条件分支</div>
+  <div class="legend-item"><div class="legend-swatch" style="border:2px dashed #71717a;background:transparent"></div> 虚线 = 返回</div>
+</div>
+
+<!-- ========== DIAGRAM 3: BUILD META ========== -->
+<h2 class="animate" style="--i:3">图 3: 知识库构建（离线）</h2>
+
+<div class="mermaid-wrap animate" style="--i:4">
+  <div class="zoom-controls">
+    <button onclick="zoomDiagram(this,1.2)">+</button>
+    <button onclick="zoomDiagram(this,0.8">&minus;</button>
+    <button onclick="resetZoom(this)">&#8634;</button>
+  </div>
+  <div class="mermaid">
+    graph TD
+
+      MCFG[meta_config.yaml<br/>表/列/指标配置]:::cfg
+      DW[(MySQL DW<br/>业务数据)]:::db
+
+      subgraph Tables["处理表结构"]
+        LOOP1[遍历 metaCfg.Tables<br/>逐表处理]:::loop
+        GET_TYPE[读取字段类型<br/>GetColumnTypes]:::step
+        GET_VAL[采样枚举值<br/>GetColumnValues 最多 10 条]:::step
+        SAVE_COL[构建并保存 ColumnInfo<br/>→ MySQL meta]:::step
+      end
+
+      subgraph Index["构建向量索引"]
+        COL_EMB[buildColumnEmbeddings<br/>DashScope 生成 embedding<br/>→ Qdrant column_collection]:::emb
+        VAL_IDX[buildValues<br/>去重取值（最多 1000）<br/>→ ES value_index]:::emb
+        MET_EMB[buildMetricEmbeddings<br/>DashScope 生成 embedding<br/>→ Qdrant metric_collection]:::emb
+      end
+
+      subgraph Output["输出存储"]
+        MYSQL_STORE[(MySQL Meta<br/>table / column / metric<br/>/ column_metric)]:::store
+        QD_STORE[(Qdrant<br/>column_collection<br/>metric_collection)]:::store
+        ES_STORE[(Elasticsearch<br/>value_index)]:::store
+      end
+
+      MCFG --> LOOP1
+      DW --> GET_TYPE
+      DW --> GET_VAL
+      GET_TYPE --> SAVE_COL
+      GET_VAL --> SAVE_COL
+      SAVE_COL -->|逐表循环| COL_EMB
+      SAVE_COL -->|逐表循环| VAL_IDX
+      COL_EMB --> QD_STORE
+      VAL_IDX --> ES_STORE
+
+      MCFG -->|遍历 metrics| SAVE_MET[保存指标+关联列<br/>→ MySQL meta]:::step
+      SAVE_MET --> MET_EMB --> QD_STORE
+
+      SAVE_COL -.->|写入| MYSQL_STORE
+      SAVE_MET -.->|写入| MYSQL_STORE
+
+      classDef cfg fill:#fef3c7,stroke:#ea580c,stroke-width:1px,stroke-dasharray:3 2;
+      classDef db fill:#f3e8ff,stroke:#a78bfa,stroke-width:1px;
+      classDef loop fill:#fff7ed,stroke:#fb923c,stroke-width:1px,stroke-dasharray:4 3;
+      classDef step fill:#f0fdf4,stroke:#22c55e,stroke-width:1px;
+      classDef emb fill:#bbf7d0,stroke:#16a34a,stroke-width:2px;
+      classDef store fill:#fef9c3,stroke:#eab308,stroke-width:2px;
+  </div>
+</div>
+
+<div class="legend animate" style="--i:5">
+  <div class="legend-item"><div class="legend-swatch" style="background:#22c55e"></div> 构建步骤</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#16a34a"></div> Embedding 写入</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#eab308"></div> 存储输出</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#fb923c;opacity:0.5"></div> 循环处理</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#a78bfa;opacity:0.5"></div> 数据源</div>
+</div>
+
+<!-- ========== DIAGRAM 4: RETRIEVAL ========== -->
+<h2 class="animate" style="--i:3">图 4: 知识库检索（在线）</h2>
+
+<div class="mermaid-wrap animate" style="--i:4">
+  <div class="zoom-controls">
+    <button onclick="zoomDiagram(this,1.2)">+</button>
+    <button onclick="zoomDiagram(this,0.8">&minus;</button>
+    <button onclick="resetZoom(this)">&#8634;</button>
+  </div>
+  <div class="mermaid">
+    graph TD
+
+      START((自然语言查询)):::start
+
+      subgraph KW["1. 关键词抽取"]
+        NLP[gojieba 分词<br/>名词/量词/专有名词]:::nlp
+      end
+
+      KW --> NLP --> PAR[3 路并行 goroutine]:::branch
+
+      PAR --> COL[recall_column<br/>Qdrant 向量检索<br/>匹配字段名+描述]:::recall
+      PAR --> MET[recall_metric<br/>Qdrant 向量检索<br/>匹配指标名+描述]:::recall
+      PAR --> VAL[recall_value<br/>ES match_phrase<br/>匹配字段取值]:::recall
+
+      subgraph Qdrant["Qdrant"]
+        QC[(column_collection)]:::qd
+        QM[(metric_collection)]:::qd
+      end
+
+      subgraph ES["Elasticsearch"]
+        EI[(value_index)]:::es
+      end
+
+      COL -.->|相似度筛选| QC
+      MET -.->|相似度筛选| QM
+      VAL -.->|全文匹配| EI
+
+      subgraph Merge["2. 合并补全"]
+        MG[merge_retrieved<br/>按 tableID 分组<br/>查询 MySQL 补全元数据]:::merge
+        MY[(MySQL Meta<br/>表/列/指标)]:::my
+        MG -.->|补全信息| MY
+      end
+
+      COL & MET & VAL --> MG
+
+      subgraph Output["3. 输出给下游"]
+        OUT[召回结果<br/>Tables + Metrics + Values]:::out
+      end
+
+      MG --> OUT
+
+      classDef start fill:#fef9c3,stroke:#facc15,stroke-width:3px;
+      classDef nlp fill:#fef08a,stroke:#facc15,stroke-width:2px;
+      classDef branch fill:#f4f4f5,stroke:#71717a,stroke-width:1px,stroke-dasharray:4 3;
+      classDef recall fill:#e0f2fe,stroke:#3b82f6,stroke-width:2px;
+      classDef qd fill:#fef9c3,stroke:#facc15,stroke-width:1px;
+      classDef es fill:#fce7f3,stroke:#f472b6,stroke-width:1px;
+      classDef merge fill:#f0fdf4,stroke:#22c55e,stroke-width:2px;
+      classDef my fill:#fff7ed,stroke:#fb923c,stroke-width:1px;
+      classDef out fill:#eff6ff,stroke:#6366f1,stroke-width:2px;
+  </div>
+</div>
+
+<div class="legend animate" style="--i:5">
+  <div class="legend-item"><div class="legend-swatch" style="background:#facc15"></div> 关键词抽取</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#3b82f6"></div> 向量/全文检索</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#6366f1"></div> 检索结果</div>
+  <div class="legend-item"><div class="legend-swatch" style="border:2px dashed #3b82f6;background:transparent"></div> 查询存储</div>
+</div>
+
+<footer class="lerian-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <svg class="logo-mark" viewBox="0 0 1090.88 280" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <path fill-rule="evenodd" d="M619.42,29.69c0,15.43-10.87,27.93-27.93,27.93s-27.93-12.51-27.93-27.93,10.86-27.93,27.92-27.93,27.93,12.51,27.93,27.93h0ZM158.64,242.4v33.54H12.13v-33.55h48.36c3.16,0,5.73-2.57,5.73-5.73V87.77c0-3.16-2.57-5.73-5.73-5.73H7.85v-34.31h98.33v188.94c0,3.16,2.57,5.73,5.73,5.73h46.74ZM168.85,179.86c0,58.52,37.29,98.33,99.47,98.33,49.15,0,79.7-30.6,86.27-67.08h-40.69c-6.29,24.54-26.97,33.91-48.61,33.91-48.85,0-53.41-45.18-53.83-55-.04-1.02.77-1.87,1.79-1.87h143.61c.76-5.26,1.13-10.42,1.13-15.44,0-32.71-20.25-91.92-95.33-91.92-57.04,0-93.8,41.26-93.81,99.07ZM314.47,158.39l-99.49.02c-1.08,0-1.94-.96-1.78-2.02,4.49-31.28,30.98-42.82,50.98-42.82,33.88,0,48.71,21.59,52.08,42.79.17,1.08-.69,2.04-1.78,2.04h0ZM867.2,83.16h0s0,0,0,0h0ZM826.87,83.16h40.33v192.83h-40.32v-24.53c0-3.09-3.92-4.41-5.79-1.95-.18.23-.35.47-.53.71h0s0,.02,0,.02h0c-.11.16-.23.32-.35.47-7.92,10.56-20.68,27.53-56.24,27.53-60.83,0-91.19-46.33-91.19-98.7,0-61.42,40.37-98.72,91.17-98.72,36.73,0,48.44,15.73,56.64,26.75l.49.66c1.86,2.49,5.81,1.18,5.81-1.93v-23.14ZM770.75,115.48c34.78,0,56.14,27.81,56.14,64.8h0c0,42-26.32,63.68-56.14,63.68-34.83,0-56.14-27.43-56.14-64.43,0-42.07,26.11-64.05,56.14-64.05ZM1063.39,101.7c14.42,14.06,21.64,36.67,21.64,67.8v106.25h-41.06v-103.99c0-43.98-22.35-56.14-45.96-56.14-31.99,0-51.6,23.22-51.6,62.92v97.21h-40.68V83.15h39.93v25.07c0,3.11,3.95,4.4,5.82,1.92,8.55-11.4,26.72-29.52,55.98-29.52,37.55,0,55.75,20.88,55.93,21.08ZM657.42,275.94v-33.54h0s-37.37,0-37.37,0c-3.16,0-5.73-2.57-5.73-5.73V83.14h-81.34v34.31h37.54c3.16,0,5.73,2.57,5.73,5.73v113.48c0,3.16-2.57,5.73-5.73,5.73h-38.14v33.55h125.03ZM499.27,119.27c0,.13-.1.23-.23.23h0s-36.31,0-36.31,0c-28.68,0-28.65,24.99-28.64,43.62,0,.46,0,.92,0,1.37v111.24c0,.13-.1.23-.23.23h-41.01c-.13,0-.23-.1-.23-.23V83.27c0-.13.1-.23.23-.23h36.49c.13,0,.23.1.23.23v24.03c0,4.05,5.24,5.65,7.49,2.28.22-.32.43-.64.65-.97,8.18-12.25,18.71-28.02,52.51-28.02h9.05v38.68Z"/>
+      </svg>
+      <div class="footer-brand-text">
+        <span class="footer-company">Lerian Studio</span>
+      </div>
+    </div>
+    <div class="footer-meta">
+      <span class="footer-generated"><strong>Generated with Ring</strong></span>
+      <span class="footer-date"></span>
+    </div>
+  </div>
+</footer>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+var isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'base',
+  themeVariables: {
+    primaryColor: isDark ? '#334155' : '#fef9c3',
+    primaryBorderColor: isDark ? '#facc15' : '#ca8a04',
+    primaryTextColor: isDark ? '#f8fafc' : '#1e293b',
+    lineColor: isDark ? '#94a3b8' : '#475569',
+    fontSize: '16px',
+    fontFamily: "'Inter',ui-sans-serif,system-ui,sans-serif"
+  }
+});
+</script>
+<script>
+function zoomDiagram(btn,f){var w=btn.closest('.mermaid-wrap'),t=w.querySelector('.mermaid');if(!t)return;var c=parseFloat(t.dataset.zoom||'1'),n=Math.min(Math.max(c*f,0.3),5);t.dataset.zoom=n;t.style.transform='scale('+n+')'}
+function resetZoom(btn){var w=btn.closest('.mermaid-wrap'),t=w.querySelector('.mermaid');if(!t)return;t.dataset.zoom='1';t.style.transform='scale(1)'}
+document.querySelectorAll('.mermaid-wrap').forEach(function(w){
+  w.addEventListener('wheel',function(e){if(!e.ctrlKey&&!e.metaKey)return;e.preventDefault();var t=w.querySelector('.mermaid');if(!t)return;var c=parseFloat(t.dataset.zoom||'1'),n=Math.min(Math.max(c*(e.deltaY<0?1.1:0.9),0.3),5);t.dataset.zoom=n;t.style.transform='scale('+n+')'},{passive:false});
+});
+document.querySelector('.footer-date').textContent=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+</script>
+
+</body>
+</html>
