@@ -1,10 +1,10 @@
 ---
-description: 为项目生成 6 张 Mermaid 架构图 HTML（Pipeline / 分层 / 构建 / 检索 / ER / 时序）。自动检测 Go/Java/Python/Node 项目类型。
+description: 为项目生成 5 张 Mermaid 架构图 HTML（Pipeline / 分层 / 构建 / 检索 / ER / 时序）。自动检测 Go/Java/Python/Node 项目类型。
 ---
 
 # Architecture Diagrams
 
-为当前项目生成 6 张 Mermaid 架构图的 HTML 文件，打开浏览器预览。
+为当前项目生成 5 张 Mermaid 架构图的 HTML 文件，打开浏览器预览。
 
 ## 执行步骤
 
@@ -28,7 +28,7 @@ description: 为项目生成 6 张 Mermaid 架构图 HTML（Pipeline / 分层 / 
 
 用 Bash read + Glob 工具。先读入口，再读核心业务。
 
-### 3. 生成 6 张图的 Mermaid DSL
+### 3. 生成 5 张图的 Mermaid DSL
 
 **图 1 — Pipeline（`graph TD`）：** 核心流程线性展开。用项目真实节点名。条件分支用菱形节点。
 
@@ -52,8 +52,8 @@ CMD -->|调用| SVC
 
 **图 3 — 离线构建（`graph TD`）：** 数据/索引构建流程，含子图
 **图 4 — 在线检索（`graph TD`）：** 运行时查找流程
-**图 5 — ER 图（`erDiagram`）：** 用实际实体和字段
-**图 6 — 时序图（`sequenceDiagram`）：** ≤6 参与方，用 `par` + `alt`
+**图 4 — ER 图（`erDiagram`）：** 用实际实体和字段
+**图 4 — 时序图（`sequenceDiagram`）：** ≤6 参与方，用 `par` + `alt`
 
 ### 简化规则
 
@@ -65,7 +65,7 @@ CMD -->|调用| SVC
 
 ### 4. 组装 HTML
 
-用以下 HTML 壳，把 6 张图的 Mermaid DSL 插入到 `<!-- DIAGRAM TEMPLATE -->` 位置：
+用以下 HTML 壳，把 5 张图的 Mermaid DSL 插入到 `<!-- DIAGRAM TEMPLATE -->` 位置：
 
 ```html
 <!DOCTYPE html>
@@ -115,7 +115,7 @@ h2{font-size:20px;font-weight:600;margin:48px 0 12px}
 <body>
 <div class="container">
 <h1>项目架构全景</h1>
-<!-- 6 张图按以下结构插入 -->
+<!-- 5 张图按以下结构插入 -->
 <h2>图 1: Pipeline 数据流</h2>
 <div class="mermaid-wrap"><div class="mermaid">...</div></div>
 <div class="legend">...</div>
@@ -135,4 +135,4 @@ h2{font-size:20px;font-weight:600;margin:48px 0 12px}
 
 ### 6. 汇报
 
-告诉用户文件路径和 6 张图的说明。
+告诉用户文件路径和 5 张图的说明。

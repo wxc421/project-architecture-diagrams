@@ -46,9 +46,8 @@ curl -sL https://raw.githubusercontent.com/wxc421/project-architecture-diagrams/
 | 1 | Pipeline 数据流 | `graph TD` | 核心流程：输入→处理→条件分支→输出 |
 | 2 | 分层架构 & 依赖 | `graph TD` | 代码分层（Controller/Service/Repository → 外部服务），每层一个宽盒子 |
 | 3 | 离线构建（如有） | `graph TD` | 索引/数据/模型等构建流程 |
-| 4 | 在线检索/查询（如有） | `graph TD` | 运行时数据查找流程 |
-| 5 | 数据模型 ER 图 | `erDiagram` | 核心实体关系 |
-| 6 | 一次请求时序 | `sequenceDiagram` | 完整调用链，≤6 参与方 |
+| 4 | 数据模型 ER 图 | `erDiagram` | 核心实体关系 |
+| 5 | 一次请求时序 | `sequenceDiagram` | 完整调用链，≤6 参与方 |
 
 ## 生成效果示例
 

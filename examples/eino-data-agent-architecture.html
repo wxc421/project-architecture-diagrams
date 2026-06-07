@@ -297,127 +297,6 @@ h2{font-size:20px;font-weight:600;margin:48px 0 12px;color:var(--text)}
   <div class="legend-item"><div class="legend-swatch" style="border:2px dashed #a1a1aa;background:transparent"></div> 虚箭头 = 网络连接</div>
 </div>
 
-<!-- ========== DIAGRAM 5: ER ========== -->
-<h2 class="animate" style="--i:3">图 5: 数据模型（ER 图）</h2>
-
-<div class="mermaid-wrap animate" style="--i:4">
-  <div class="zoom-controls">
-    <button onclick="zoomDiagram(this,1.2)">+</button>
-    <button onclick="zoomDiagram(this,0.8">&minus;</button>
-    <button onclick="resetZoom(this)">&#8634;</button>
-  </div>
-  <div class="mermaid">
-    erDiagram
-
-      TableInfo ||--o{ ColumnInfo : "1:N 包含"
-      ColumnInfo }o--|| MetricInfo : "M:N ColumnMetric"
-      TableInfo ||--o{ MetricInfo : "1:N 定义"
-      ColumnInfo ||--o{ ValueInfo : "1:N 有取值"
-
-      TableInfo {
-        string ID PK "表名"
-        string Name "显示名"
-        string Role "事实表/维度表"
-        string Description "说明"
-      }
-
-      ColumnInfo {
-        string ID PK "表名.列名"
-        string Name "列名"
-        string Type "MySQL 类型"
-        string Role "维度/度量"
-        string Description "说明"
-        string Alias "别名列表"
-        string TableID FK "所属表"
-      }
-
-      MetricInfo {
-        string ID PK "指标名"
-        string Name "显示名"
-        string Description "指标说明"
-        string RelevantColumns "关联列"
-        string Alias "别名"
-      }
-
-      ColumnMetric {
-        string ColumnID FK "所属列"
-        string MetricID FK "所属指标"
-      }
-
-      ValueInfo {
-        string ID PK "表.列.值"
-        string Value "枚举值"
-        string ColumnID FK "所属列"
-        string TableID "所属表"
-      }
-  </div>
-</div>
-
-<div class="legend animate" style="--i:5">
-  <div class="legend-item"><div class="legend-swatch" style="background:#6366f1"></div> 实体</div>
-  <div class="legend-item"><div class="legend-swatch" style="border:2px solid #6366f1;background:transparent"></div> ||=一, o{=多</div>
-</div>
-
-<!-- ========== DIAGRAM 6: SEQUENCE ========== -->
-<h2 class="animate" style="--i:3">图 6: 一次查询的完整时序</h2>
-
-<div class="mermaid-wrap animate" style="--i:4">
-  <div class="zoom-controls">
-    <button onclick="zoomDiagram(this,1.2)">+</button>
-    <button onclick="zoomDiagram(this,0.8">&minus;</button>
-    <button onclick="resetZoom(this)">&#8634;</button>
-  </div>
-  <div class="mermaid">
-    sequenceDiagram
-      participant U as 用户
-      participant H as HTTP
-      participant QS as QueryService
-      participant G as Pipeline (Eino Graph)
-      participant LLM as LLM
-      participant DB as MySQL
-      participant S as Qdrant / ES
-
-      U->>H: POST /api/query
-      H->>QS: HandleQuery
-      QS->>G: Run(ctx, state)
-
-      G->>G: extract_keywords (分词)
-
-      par 并行召回 (goroutine x3)
-        G->>S: 向量检索字段/指标
-        G->>S: 全文检索取值
-      end
-
-      G->>DB: 查询元数据补全
-
-      par LLM 筛选 (goroutine x2)
-        G->>LLM: 筛表+字段
-        G->>LLM: 筛指标
-      end
-
-      G->>LLM: 生成 SQL
-      G->>DB: EXPLAIN 验证
-
-      alt 验证通过
-        G->>DB: 执行 SQL
-      else 验证失败
-        G->>LLM: 修正 SQL
-        G->>DB: 重试 EXPLAIN + 执行
-      end
-
-      G-->>QS: 结果
-      QS-->>H: SSE 推送
-      H-->>U: 进度 + 表格
-  </div>
-</div>
-
-<div class="legend animate" style="--i:5">
-  <div class="legend-item"><div class="legend-swatch" style="background:#3b82f6"></div> 系统组件</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#22c55e"></div> par = 并行调用</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#ef4444"></div> alt = 条件分支</div>
-  <div class="legend-item"><div class="legend-swatch" style="border:2px dashed #71717a;background:transparent"></div> 虚线 = 返回</div>
-</div>
-
 <!-- ========== DIAGRAM 3: BUILD META ========== -->
 <h2 class="animate" style="--i:3">图 3: 知识库构建（离线）</h2>
 
@@ -485,8 +364,8 @@ h2{font-size:20px;font-weight:600;margin:48px 0 12px;color:var(--text)}
   <div class="legend-item"><div class="legend-swatch" style="background:#a78bfa;opacity:0.5"></div> 数据源</div>
 </div>
 
-<!-- ========== DIAGRAM 4: RETRIEVAL ========== -->
-<h2 class="animate" style="--i:3">图 4: 知识库检索（在线）</h2>
+<!-- ========== DIAGRAM 5: ER ========== -->
+<h2 class="animate" style="--i:3">图 4: 数据模型（ER 图）</h2>
 
 <div class="mermaid-wrap animate" style="--i:4">
   <div class="zoom-controls">
@@ -495,64 +374,115 @@ h2{font-size:20px;font-weight:600;margin:48px 0 12px;color:var(--text)}
     <button onclick="resetZoom(this)">&#8634;</button>
   </div>
   <div class="mermaid">
-    graph TD
+    erDiagram
 
-      START((自然语言查询)):::start
+      TableInfo ||--o{ ColumnInfo : "1:N 包含"
+      ColumnInfo }o--|| MetricInfo : "M:N ColumnMetric"
+      TableInfo ||--o{ MetricInfo : "1:N 定义"
+      ColumnInfo ||--o{ ValueInfo : "1:N 有取值"
 
-      subgraph KW["1. 关键词抽取"]
-        NLP[gojieba 分词<br/>名词/量词/专有名词]:::nlp
-      end
+      TableInfo {
+        string ID PK "表名"
+        string Name "显示名"
+        string Role "事实表/维度表"
+        string Description "说明"
+      }
 
-      KW --> NLP --> PAR[3 路并行 goroutine]:::branch
+      ColumnInfo {
+        string ID PK "表名.列名"
+        string Name "列名"
+        string Type "MySQL 类型"
+        string Role "维度/度量"
+        string Description "说明"
+        string Alias "别名列表"
+        string TableID FK "所属表"
+      }
 
-      PAR --> COL[recall_column<br/>Qdrant 向量检索<br/>匹配字段名+描述]:::recall
-      PAR --> MET[recall_metric<br/>Qdrant 向量检索<br/>匹配指标名+描述]:::recall
-      PAR --> VAL[recall_value<br/>ES match_phrase<br/>匹配字段取值]:::recall
+      MetricInfo {
+        string ID PK "指标名"
+        string Name "显示名"
+        string Description "指标说明"
+        string RelevantColumns "关联列"
+        string Alias "别名"
+      }
 
-      subgraph Qdrant["Qdrant"]
-        QC[(column_collection)]:::qd
-        QM[(metric_collection)]:::qd
-      end
+      ColumnMetric {
+        string ColumnID FK "所属列"
+        string MetricID FK "所属指标"
+      }
 
-      subgraph ES["Elasticsearch"]
-        EI[(value_index)]:::es
-      end
-
-      COL -.->|相似度筛选| QC
-      MET -.->|相似度筛选| QM
-      VAL -.->|全文匹配| EI
-
-      subgraph Merge["2. 合并补全"]
-        MG[merge_retrieved<br/>按 tableID 分组<br/>查询 MySQL 补全元数据]:::merge
-        MY[(MySQL Meta<br/>表/列/指标)]:::my
-        MG -.->|补全信息| MY
-      end
-
-      COL & MET & VAL --> MG
-
-      subgraph Output["3. 输出给下游"]
-        OUT[召回结果<br/>Tables + Metrics + Values]:::out
-      end
-
-      MG --> OUT
-
-      classDef start fill:#fef9c3,stroke:#facc15,stroke-width:3px;
-      classDef nlp fill:#fef08a,stroke:#facc15,stroke-width:2px;
-      classDef branch fill:#f4f4f5,stroke:#71717a,stroke-width:1px,stroke-dasharray:4 3;
-      classDef recall fill:#e0f2fe,stroke:#3b82f6,stroke-width:2px;
-      classDef qd fill:#fef9c3,stroke:#facc15,stroke-width:1px;
-      classDef es fill:#fce7f3,stroke:#f472b6,stroke-width:1px;
-      classDef merge fill:#f0fdf4,stroke:#22c55e,stroke-width:2px;
-      classDef my fill:#fff7ed,stroke:#fb923c,stroke-width:1px;
-      classDef out fill:#eff6ff,stroke:#6366f1,stroke-width:2px;
+      ValueInfo {
+        string ID PK "表.列.值"
+        string Value "枚举值"
+        string ColumnID FK "所属列"
+        string TableID "所属表"
+      }
   </div>
 </div>
 
 <div class="legend animate" style="--i:5">
-  <div class="legend-item"><div class="legend-swatch" style="background:#facc15"></div> 关键词抽取</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#3b82f6"></div> 向量/全文检索</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#6366f1"></div> 检索结果</div>
-  <div class="legend-item"><div class="legend-swatch" style="border:2px dashed #3b82f6;background:transparent"></div> 查询存储</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#6366f1"></div> 实体</div>
+  <div class="legend-item"><div class="legend-swatch" style="border:2px solid #6366f1;background:transparent"></div> ||=一, o{=多</div>
+</div>
+
+<!-- ========== DIAGRAM 6: SEQUENCE ========== -->
+<h2 class="animate" style="--i:3">图 5: 一次查询的完整时序</h2>
+
+<div class="mermaid-wrap animate" style="--i:4">
+  <div class="zoom-controls">
+    <button onclick="zoomDiagram(this,1.2)">+</button>
+    <button onclick="zoomDiagram(this,0.8">&minus;</button>
+    <button onclick="resetZoom(this)">&#8634;</button>
+  </div>
+  <div class="mermaid">
+    sequenceDiagram
+      participant U as 用户
+      participant H as HTTP
+      participant QS as QueryService
+      participant G as Pipeline (Eino Graph)
+      participant LLM as LLM
+      participant DB as MySQL
+      participant S as Qdrant / ES
+
+      U->>H: POST /api/query
+      H->>QS: HandleQuery
+      QS->>G: Run(ctx, state)
+
+      G->>G: extract_keywords (分词)
+
+      par 并行召回 (goroutine x3)
+        G->>S: 向量检索字段/指标
+        G->>S: 全文检索取值
+      end
+
+      G->>DB: 查询元数据补全
+
+      par LLM 筛选 (goroutine x2)
+        G->>LLM: 筛表+字段
+        G->>LLM: 筛指标
+      end
+
+      G->>LLM: 生成 SQL
+      G->>DB: EXPLAIN 验证
+
+      alt 验证通过
+        G->>DB: 执行 SQL
+      else 验证失败
+        G->>LLM: 修正 SQL
+        G->>DB: 重试 EXPLAIN + 执行
+      end
+
+      G-->>QS: 结果
+      QS-->>H: SSE 推送
+      H-->>U: 进度 + 表格
+  </div>
+</div>
+
+<div class="legend animate" style="--i:5">
+  <div class="legend-item"><div class="legend-swatch" style="background:#3b82f6"></div> 系统组件</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#22c55e"></div> par = 并行调用</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#ef4444"></div> alt = 条件分支</div>
+  <div class="legend-item"><div class="legend-swatch" style="border:2px dashed #71717a;background:transparent"></div> 虚线 = 返回</div>
 </div>
 
 <footer class="lerian-footer">
