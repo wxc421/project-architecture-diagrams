@@ -24,7 +24,18 @@ cp templates/project-architecture.html ~/.hermes/skills/software-development/pro
 
 Hermes 会自动检测项目类型、通读源码、生成 6 张图并打开浏览器预览。
 
-### 方式二：Claude / 其他 AI 中使用
+### 方式二：Claude Code 中使用
+
+安装 slash 命令：
+
+```bash
+curl -sL https://raw.githubusercontent.com/wxc421/project-architecture-diagrams/main/claude-command/arch-diagram.md \
+  -o ~/.claude/commands/arch-diagram.md
+```
+
+然后在任意项目目录下输入 `/arch-diagram`，Claude Code 会自动检测项目类型、生成 6 张图并打开预览。
+
+### 方式三：Claude.ai / 其他 AI 中使用
 
 把 `prompts/for-claude.md` 的内容 + 你的项目源码发给 Claude 即可。
 
