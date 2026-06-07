@@ -140,7 +140,7 @@ h2{font-size:20px;font-weight:600;margin:48px 0 12px;color:var(--text)}
 </p>
 
 <!-- ========== DIAGRAM 1: PIPELINE ========== -->
-<h2 class="animate" style="--i:3">图 1: Graph Pipeline 数据流</h2>
+<h2 class="animate" style="--i:3">图 1: 知识库检索（在线）</h2>
 
 <div class="mermaid-wrap animate" style="--i:4">
   <div class="zoom-controls">
@@ -222,8 +222,75 @@ h2{font-size:20px;font-weight:600;margin:48px 0 12px;color:var(--text)}
   <div class="legend-item"><div class="legend-swatch" style="border:2px dashed #16a34a;background:transparent"></div> goroutine 并行</div>
 </div>
 
-<!-- ========== DIAGRAM 2: ARCHITECTURE ========== -->
-<h2 class="animate" style="--i:3">图 2: 分层架构 &amp; 依赖关系</h2>
+<!-- ========== DIAGRAM 2: BUILD META ========== -->
+<h2 class="animate" style="--i:3">图 2: 知识库构建（离线）</h2>
+
+<div class="mermaid-wrap animate" style="--i:4">
+  <div class="zoom-controls">
+    <button onclick="zoomDiagram(this,1.2)">+</button>
+    <button onclick="zoomDiagram(this,0.8">&minus;</button>
+    <button onclick="resetZoom(this)">&#8634;</button>
+  </div>
+  <div class="mermaid">
+    graph TD
+
+      MCFG[meta_config.yaml<br/>表/列/指标配置]:::cfg
+      DW[(MySQL DW<br/>业务数据)]:::db
+
+      subgraph Tables["处理表结构"]
+        LOOP1[遍历 metaCfg.Tables<br/>逐表处理]:::loop
+        GET_TYPE[读取字段类型<br/>GetColumnTypes]:::step
+        GET_VAL[采样枚举值<br/>GetColumnValues 最多 10 条]:::step
+        SAVE_COL[构建并保存 ColumnInfo<br/>→ MySQL meta]:::step
+      end
+
+      subgraph Index["构建向量索引"]
+        COL_EMB[buildColumnEmbeddings<br/>DashScope 生成 embedding<br/>→ Qdrant column_collection]:::emb
+        VAL_IDX[buildValues<br/>去重取值（最多 1000）<br/>→ ES value_index]:::emb
+        MET_EMB[buildMetricEmbeddings<br/>DashScope 生成 embedding<br/>→ Qdrant metric_collection]:::emb
+      end
+
+      subgraph Output["输出存储"]
+        MYSQL_STORE[(MySQL Meta<br/>table / column / metric<br/>/ column_metric)]:::store
+        QD_STORE[(Qdrant<br/>column_collection<br/>metric_collection)]:::store
+        ES_STORE[(Elasticsearch<br/>value_index)]:::store
+      end
+
+      MCFG --> LOOP1
+      DW --> GET_TYPE
+      DW --> GET_VAL
+      GET_TYPE --> SAVE_COL
+      GET_VAL --> SAVE_COL
+      SAVE_COL -->|逐表循环| COL_EMB
+      SAVE_COL -->|逐表循环| VAL_IDX
+      COL_EMB --> QD_STORE
+      VAL_IDX --> ES_STORE
+
+      MCFG -->|遍历 metrics| SAVE_MET[保存指标+关联列<br/>→ MySQL meta]:::step
+      SAVE_MET --> MET_EMB --> QD_STORE
+
+      SAVE_COL -.->|写入| MYSQL_STORE
+      SAVE_MET -.->|写入| MYSQL_STORE
+
+      classDef cfg fill:#fef3c7,stroke:#ea580c,stroke-width:1px,stroke-dasharray:3 2;
+      classDef db fill:#f3e8ff,stroke:#a78bfa,stroke-width:1px;
+      classDef loop fill:#fff7ed,stroke:#fb923c,stroke-width:1px,stroke-dasharray:4 3;
+      classDef step fill:#f0fdf4,stroke:#22c55e,stroke-width:1px;
+      classDef emb fill:#bbf7d0,stroke:#16a34a,stroke-width:2px;
+      classDef store fill:#fef9c3,stroke:#eab308,stroke-width:2px;
+  </div>
+</div>
+
+<div class="legend animate" style="--i:5">
+  <div class="legend-item"><div class="legend-swatch" style="background:#22c55e"></div> 构建步骤</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#16a34a"></div> Embedding 写入</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#eab308"></div> 存储输出</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#fb923c;opacity:0.5"></div> 循环处理</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#a78bfa;opacity:0.5"></div> 数据源</div>
+</div>
+
+<!-- ========== DIAGRAM 3: ARCHITECTURE ========== -->
+<h2 class="animate" style="--i:3">图 3: 分层架构 &amp; 依赖关系</h2>
 
 <div class="mermaid-wrap animate" style="--i:4">
   <div class="zoom-controls">
@@ -297,74 +364,7 @@ h2{font-size:20px;font-weight:600;margin:48px 0 12px;color:var(--text)}
   <div class="legend-item"><div class="legend-swatch" style="border:2px dashed #a1a1aa;background:transparent"></div> 虚箭头 = 网络连接</div>
 </div>
 
-<!-- ========== DIAGRAM 3: BUILD META ========== -->
-<h2 class="animate" style="--i:3">图 3: 知识库构建（离线）</h2>
-
-<div class="mermaid-wrap animate" style="--i:4">
-  <div class="zoom-controls">
-    <button onclick="zoomDiagram(this,1.2)">+</button>
-    <button onclick="zoomDiagram(this,0.8">&minus;</button>
-    <button onclick="resetZoom(this)">&#8634;</button>
-  </div>
-  <div class="mermaid">
-    graph TD
-
-      MCFG[meta_config.yaml<br/>表/列/指标配置]:::cfg
-      DW[(MySQL DW<br/>业务数据)]:::db
-
-      subgraph Tables["处理表结构"]
-        LOOP1[遍历 metaCfg.Tables<br/>逐表处理]:::loop
-        GET_TYPE[读取字段类型<br/>GetColumnTypes]:::step
-        GET_VAL[采样枚举值<br/>GetColumnValues 最多 10 条]:::step
-        SAVE_COL[构建并保存 ColumnInfo<br/>→ MySQL meta]:::step
-      end
-
-      subgraph Index["构建向量索引"]
-        COL_EMB[buildColumnEmbeddings<br/>DashScope 生成 embedding<br/>→ Qdrant column_collection]:::emb
-        VAL_IDX[buildValues<br/>去重取值（最多 1000）<br/>→ ES value_index]:::emb
-        MET_EMB[buildMetricEmbeddings<br/>DashScope 生成 embedding<br/>→ Qdrant metric_collection]:::emb
-      end
-
-      subgraph Output["输出存储"]
-        MYSQL_STORE[(MySQL Meta<br/>table / column / metric<br/>/ column_metric)]:::store
-        QD_STORE[(Qdrant<br/>column_collection<br/>metric_collection)]:::store
-        ES_STORE[(Elasticsearch<br/>value_index)]:::store
-      end
-
-      MCFG --> LOOP1
-      DW --> GET_TYPE
-      DW --> GET_VAL
-      GET_TYPE --> SAVE_COL
-      GET_VAL --> SAVE_COL
-      SAVE_COL -->|逐表循环| COL_EMB
-      SAVE_COL -->|逐表循环| VAL_IDX
-      COL_EMB --> QD_STORE
-      VAL_IDX --> ES_STORE
-
-      MCFG -->|遍历 metrics| SAVE_MET[保存指标+关联列<br/>→ MySQL meta]:::step
-      SAVE_MET --> MET_EMB --> QD_STORE
-
-      SAVE_COL -.->|写入| MYSQL_STORE
-      SAVE_MET -.->|写入| MYSQL_STORE
-
-      classDef cfg fill:#fef3c7,stroke:#ea580c,stroke-width:1px,stroke-dasharray:3 2;
-      classDef db fill:#f3e8ff,stroke:#a78bfa,stroke-width:1px;
-      classDef loop fill:#fff7ed,stroke:#fb923c,stroke-width:1px,stroke-dasharray:4 3;
-      classDef step fill:#f0fdf4,stroke:#22c55e,stroke-width:1px;
-      classDef emb fill:#bbf7d0,stroke:#16a34a,stroke-width:2px;
-      classDef store fill:#fef9c3,stroke:#eab308,stroke-width:2px;
-  </div>
-</div>
-
-<div class="legend animate" style="--i:5">
-  <div class="legend-item"><div class="legend-swatch" style="background:#22c55e"></div> 构建步骤</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#16a34a"></div> Embedding 写入</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#eab308"></div> 存储输出</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#fb923c;opacity:0.5"></div> 循环处理</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#a78bfa;opacity:0.5"></div> 数据源</div>
-</div>
-
-<!-- ========== DIAGRAM 5: ER ========== -->
+<!-- ========== DIAGRAM 4: ER ========== -->
 <h2 class="animate" style="--i:3">图 4: 数据模型（ER 图）</h2>
 
 <div class="mermaid-wrap animate" style="--i:4">
@@ -425,7 +425,7 @@ h2{font-size:20px;font-weight:600;margin:48px 0 12px;color:var(--text)}
   <div class="legend-item"><div class="legend-swatch" style="border:2px solid #6366f1;background:transparent"></div> ||=一, o{=多</div>
 </div>
 
-<!-- ========== DIAGRAM 6: SEQUENCE ========== -->
+<!-- ========== DIAGRAM 5: SEQUENCE ========== -->
 <h2 class="animate" style="--i:3">图 5: 一次查询的完整时序</h2>
 
 <div class="mermaid-wrap animate" style="--i:4">
